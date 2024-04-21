@@ -51,7 +51,9 @@ const createSpace = () => {
   space.bindMouse().bindTouch().play()
 }
 
-createSpace()
+$(document).ready(() => {
+  createSpace()
+})
 
 function calcNextPoint(point, center, semimajor, semiminor, angle) {
   const newPt = point.clone()
