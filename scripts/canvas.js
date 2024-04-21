@@ -38,12 +38,12 @@ const createSpace = () => {
   space.add({ 
     animate: (time, ftime) => {
       // cause an error in this function to see the initial setup
-      form.fillOnly("#fff").point(center, 10, "circle")
+      form.fillOnly("#fff").point(center, 8, "circle")
 
       for (let i = 0; i < pts.length; i++) {
         const brightness = calcPointBrightness(pts[i], center, semimajor, semiminor)
         pts[i] = calcNextPoint(pts[i], center, semimajor, semiminor, rotAmt)
-        form.fill(colors[i % colors.length]).alpha(brightness).point(pts[i], 1, "circle")
+        form.fillOnly(colors[i % colors.length]).alpha(brightness).point(pts[i], 1, "circle")
       }
     }
   })
