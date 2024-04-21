@@ -5,45 +5,38 @@
 <head>
   <title>Brenden Ehlers</title>
   <meta charset="UTF-8">
-  <meta name="description" content="Welcome to the portfolio site for Brenden Ehlers!">
+  <meta name="description" content="Welcome to my portfolio site">
   <meta name="keywords" content="portfolio">
-  <meta name="author" content="Your Name">
+  <meta name="author" content="Brenden Ehlers">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- EXTERNAL -->
   <script src="https://kit.fontawesome.com/f46da6ef85.js" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pts/0.12.3/pts.min.js"
-    integrity="sha512-K0Q2tyT9kM6wfFybFNcQifytbKwLf1I8tZgzUasG3PsVT0SSID7afyLj1jxKV2Rj43QFaBGkexyU8hqI6LNHWA=="
-    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"
     integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 
-
-  <!-- <link rel="stylesheet" href="./output.css" /> -->
-
-  <style>
-  </style>
+  <!-- LOCAL -->
+  <script type="module" src="scripts/pts.min.js"></script>
+  <link rel="stylesheet" href="./index.css" />
 </head>
 
-<body>
-  <main class="flex flex-col justify-center items-center text-center text-white bg-gray-900">
-    <section id="home" class="min-h-screen pt-40 max-w-prose flex flex-col items-center z-20">
-      <h1 class="text-3xl font-bold">Brenden Ehlers</h1>
-      <p class="max-w-prose px-10">
-        Backend engineer with experience in programming programs and writing words. Lucky you
-        for coming across my website!
+<body class="bg-background overscroll-none overflow-hidden">
+  <main class="flex flex-col justify-center items-center text-center text-text">
+    <section id="home" class="min-h-screen pt-40 max-w-prose flex flex-col items-center z-10">
+      <h1 class="text-4xl font-bold font-mono">Brenden Ehlers</h1>
+      <p class="max-w-prose px-10 pt-2 text-xl font-mono">
+        Passionate about software and coding
       </p>
 
-      <div class="flex flex-row justify-center items-stretch py-8 w-2/3">
+      <div class="flex flex-row justify-center items-stretch py-4 w-2/3">
         <a href="https://github.com/brendenehlers" target="_blank"
-          class="hover:text-blue-500 w-full min-h-full flex justify-center items-center">
+          class="hover:text-socialLinkHighlight w-full min-h-full flex justify-center items-center">
           <div class="flex flex-col justify-center h-12 w-12 m-2">
             <span class="fa-brands fa-github fa-xl" />
           </div>
         </a>
         <a href="https://linkedin.com/in/brendenehlers" target="_blank"
-          class="hover:text-blue-500 w-full min-h-full flex justify-center items-center">
+          class="hover:text-socialLinkHighlight w-full min-h-full flex justify-center items-center">
           <div class="flex flex-col justify-center h-12 w-12 m-2">
             <span class="fa-brands fa-linkedin-in fa-xl" />
           </div>
@@ -55,7 +48,7 @@
           </div>
         </a>
         <a href="https://dev.to/behlers" target="_blank"
-          class="hover:text-blue-500 w-full min-h-full flex justify-center items-center">
+          class="hover:text-socialLinkHighlight w-full min-h-full flex justify-center items-center">
           <div class="flex flex-col justify-center h-12 w-12 m-2">
             <span class="fa-brands fa-dev fa-xl" />
           </div>
@@ -63,47 +56,17 @@
       </div>
     </section>
 
-    <header class="sticky z-20 left-0 top-0 w-screen bg-gray-900 py-4 px-2">
-      <ul class="flex flex-row gap-2">
-        <li><a class="hover:text-blue-500" href="#home">Home</a></li>
-        <li><a class="hover:text-blue-500" href="#about">About</a></li>
-        <li><a class="hover:text-blue-500" href="#projects">Projects</a></li>
-      </ul>
-    </header>
-
     <section>
-      <div class="canvas h-full w-screen absolute left-0 top-0 z-10">
+      <div class="canvas h-full w-screen absolute left-0 top-0">
         <canvas id="canvas" />
       </div>
     </section>
 
-    <section class="min-h-screen max-w-prose">
-      <h1 id="about" class="pt-20">About</h1>
-      <p>This is a paragraph of information about me</p>
-    </section>
+    <div class="w-screen relative top-[-2px] border-2 border-bottomHighlight z-30"></div>
 
-    <section class="min-h-screen max-w-prose">
-      <h1 id="projects" class="pt-20">Projects</h1>
-      <div class="card-contianer">
-        <div class="card">
-          <h2>Project 1</h2>
-          <p>A little bit about the project</p>
-        </div>
-
-        <div class="card">
-          <h2>Project 2</h2>
-          <p>A little bit about the project</p>
-        </div>
-
-        <div class="card">
-          <h2>Project 3</h2>
-          <p>A little bit about the project</p>
-        </div>
-      </div>
-    </section>
   </main>
 
-  <script src="scripts/canvas.js"></script>
+  <script type="module" src="scripts/canvas.js"></script>
 </body>
 
 </html>

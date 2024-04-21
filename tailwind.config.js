@@ -1,15 +1,20 @@
-module.exports = {
-  content: ["./*.html"],
-  darkMode: false, // or 'media' or 'class'
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["index.html", "index.css", "styles/**/*.css"],
   theme: {
     extend: {
       colors: {
-        socialLinkHover: "#00f"
+        socialLinkHighlight: "#3b82f6",
+        bottomHighlight: "#be4bff",
+        background: "black",
+        text: "white",
       },
     },
   },
   variants: {
-    extend: {},
+    extend: {
+      "inline-block": ['group-hover'],
+    },
   },
   plugins: [],
 }

@@ -1,21 +1,21 @@
 Pts.namespace( window )
-let space
 
 const createSpace = () => {
   // config params
-  const count = 1000 // number of points
+  const count = 2500 // number of points
   const maxRadius = 300 // how far the points can go out when being generated
   const semimajor = 1.5 // controls how far the points go on the x-axis
   const semiminor = 1 // controls how far the points go on the y-axis
   const rotAmt = 7 * Const.one_degree // how fast the points move
   const rate = 2.3 // used in the expDis function
+  const colors = ["#be4bff", "#d742ff", "#e3bcff", "#f5bfff", "#c1a1c3", "#f", "#f", "#f", "#f", "#f"]
 
   // controls the center points
   const center = new Pt()
   center.x = Math.floor(window.innerWidth / 2)
   center.y = Math.floor(5 * window.innerHeight / 8)
 
-  space = new CanvasSpace("canvas")
+  const space = new CanvasSpace("canvas")
     .setup({ resize: true, bgcolor: "black", retina: true })
 
   const form = space.getForm()
@@ -43,7 +43,7 @@ const createSpace = () => {
       for (let i = 0; i < pts.length; i++) {
         const brightness = calcPointBrightness(pts[i], center, semimajor, semiminor)
         pts[i] = calcNextPoint(pts[i], center, semimajor, semiminor, rotAmt)
-        form.fill("#fff").alpha(brightness).point(pts[i], 1, "circle")
+        form.fill(colors[i % colors.length]).alpha(brightness).point(pts[i], 1, "circle")
       }
     }
   })
@@ -52,12 +52,6 @@ const createSpace = () => {
 }
 
 createSpace()
-
-$(window).resize(() => {
-  space.removeAll()
-  $('canvas').remove()
-  createSpace()
-})
 
 function calcNextPoint(point, center, semimajor, semiminor, angle) {
   const newPt = point.clone()
@@ -84,8 +78,8 @@ function calcPointBrightness(point, center, semimajor, semiminor) {
   const normPoint = centerizePoint(point, center)
   const [r, angle] = convertPolar(normPoint, semimajor, semiminor)
 
-  scaledAngle = (angle) / 2 + (Math.PI / 4)
-  brightness = 0.7 * Math.abs(Math.sin(scaledAngle)) + 0.3
+  const scaledAngle = (angle) / 2 + (Math.PI / 4)
+  let brightness = 0.7 * Math.abs(Math.sin(scaledAngle)) + 0.3
 
   brightness *= expDis(r / 150, 1)
 
