@@ -9,61 +9,81 @@
   <meta name="keywords" content="portfolio">
   <meta name="author" content="Your Name">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link async href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+
+  <!-- EXTERNAL -->
   <script src="https://kit.fontawesome.com/f46da6ef85.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pts/0.12.3/pts.min.js"
+    integrity="sha512-K0Q2tyT9kM6wfFybFNcQifytbKwLf1I8tZgzUasG3PsVT0SSID7afyLj1jxKV2Rj43QFaBGkexyU8hqI6LNHWA=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 
 
-  <link rel="stylesheet" href="./output.css" />
+  <!-- <link rel="stylesheet" href="./output.css" /> -->
 
   <style>
   </style>
 </head>
 
 <body>
-  <main class="flex flex-col items-center text-center">
-    <!-- <header>
+  <main class="flex flex-col justify-center items-center text-center text-white bg-gray-900">
+    <section id="home" class="min-h-screen pt-40 max-w-prose flex flex-col items-center z-20">
+      <h1 class="text-3xl font-bold">Brenden Ehlers</h1>
+      <p class="max-w-prose px-10">
+        Backend engineer with experience in programming programs and writing words. Lucky you
+        for coming across my website!
+      </p>
+
+      <div class="flex flex-row justify-center items-stretch py-8 w-2/3">
+        <a href="https://github.com/brendenehlers" target="_blank"
+          class="hover:text-blue-500 w-full min-h-full flex justify-center items-center">
+          <div class="flex flex-col justify-center h-12 w-12 m-2">
+            <span class="fa-brands fa-github fa-xl" />
+          </div>
+        </a>
+        <a href="https://linkedin.com/in/brendenehlers" target="_blank"
+          class="hover:text-blue-500 w-full min-h-full flex justify-center items-center">
+          <div class="flex flex-col justify-center h-12 w-12 m-2">
+            <span class="fa-brands fa-linkedin-in fa-xl" />
+          </div>
+        </a>
+        <a href="https://x.com/brendenehlers" target="_blank"
+          class="hover:text-blue-500 w-full min-h-full flex justify-center items-center">
+          <div class="flex flex-col justify-center h-12 w-12 m-2">
+            <span class="fa-brands fa-x-twitter fa-xl" />
+          </div>
+        </a>
+        <a href="https://dev.to/behlers" target="_blank"
+          class="hover:text-blue-500 w-full min-h-full flex justify-center items-center">
+          <div class="flex flex-col justify-center h-12 w-12 m-2">
+            <span class="fa-brands fa-dev fa-xl" />
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <header class="sticky z-20 left-0 top-0 w-screen bg-gray-900 py-4 px-2">
       <ul class="flex flex-row gap-2">
         <li><a class="hover:text-blue-500" href="#home">Home</a></li>
         <li><a class="hover:text-blue-500" href="#about">About</a></li>
         <li><a class="hover:text-blue-500" href="#projects">Projects</a></li>
       </ul>
-    </header> -->
+    </header>
 
-    <section id="home" class="min-h-screen pt-40">
-      <h1 class="text-3xl font-bold">Brenden Ehlers</h1>
-      <p>Always think of the hook first</p>
-
-      <ul class="flex flex-row gap-4 justify-around py-4">
-        <li>
-          <a href="https://github.com/brendenehlers" target="_blank" class="hover:text-socialLinkHover">
-            <span class="fa-brands fa-github fa-xl" />
-          </a>
-        </li>
-        <li>
-          <a href="https://linkedin.com/in/brendenehlers" target="_blank" class="hover:text-socialLinkHover">
-            <span class="fa-brands fa-linkedin-in fa-xl" />
-          </a>
-        </li>
-        <li>
-          <a href="https://x.com/brendenehlers" target="_blank" class="hover:text-socialLinkHover">
-            <span class="fa-brands fa-x-twitter fa-xl" />
-          </a>
-        </li>
-        <li>
-          <a href="https://dev.to/behlers" target="_blank" class="hover:text-socialLinkHover">
-            <span class="fa-brands fa-dev fa-xl" />
-          </a>
-        </li>
-      </ul>
+    <section>
+      <div class="canvas h-full w-screen absolute left-0 top-0 z-10">
+        <canvas id="canvas" />
+      </div>
     </section>
 
-    <section id="about" class="min-h-screen">
-      <h1>About</h1>
+    <section class="min-h-screen max-w-prose">
+      <h1 id="about" class="pt-20">About</h1>
       <p>This is a paragraph of information about me</p>
     </section>
 
-    <section id="projects" class="min-h-screen">
-      <h1>Projects</h1>
+    <section class="min-h-screen max-w-prose">
+      <h1 id="projects" class="pt-20">Projects</h1>
       <div class="card-contianer">
         <div class="card">
           <h2>Project 1</h2>
@@ -82,6 +102,8 @@
       </div>
     </section>
   </main>
+
+  <script src="scripts/canvas.js"></script>
 </body>
 
 </html>
