@@ -7,7 +7,6 @@ const count = 2500 // number of points
 const maxRadius = 300 // how far the points can go out when being generated
 const semimajor = 1.5 // controls how far the points go on the x-axis
 const semiminor = 1 // controls how far the points go on the y-axis
-const rotAmt = 8 * Const.one_degree // how fast the points move
 const rate = 2.3 // used in the expDis function
 const brightnessFalloff = 200
 const colors = ["#be4bff", "#d742ff", "#e3bcff", "#f5bfff", "#c1a1c3", "#f", "#f", "#f", "#f", "#f"]
@@ -17,8 +16,14 @@ const brightnessCache = undefined
 const expDisCache = new Map()
 
 let pointSize = 1
-if (window.innerWidth < 600) {
+if (isSmallScreen()) {
   pointSize = 0.5
+}
+
+// how fast the points move
+let rotAmt = 3 * Const.one_degree 
+if (isSmallScreen()) {
+  rotAmt = 6 * Const.one_degree
 }
 
 class Polar {
@@ -155,4 +160,9 @@ function convertPolar(point, semimajor, semiminor) {
 function storeObjectInLocalStorage(key, obj) {
   const serialized = JSON.stringify(Array.from(map.entries()))
   localStorage.setItem(key, serialized)
+}
+
+
+function isSmallScreen() {
+  return window.innerWidth < 600
 }
