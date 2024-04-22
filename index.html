@@ -11,13 +11,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- LOCAL -->
-  <link defer rel="stylesheet" href="./index.css" />
-  <script async type="module" src="scripts/pts.min.js"></script>
+  <link rel="stylesheet" href="./index.css" />
+  <script type="module" src="scripts/pts.min.js"></script>
 
   <!-- EXTERNAL -->
-  <script defer src="https://code.jquery.com/jquery-3.7.1.min.js"
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"
     integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-  <script async src="https://kit.fontawesome.com/f46da6ef85.js" crossorigin="anonymous"></script>
+  <script defer src="https://kit.fontawesome.com/f46da6ef85.js" crossorigin="anonymous"></script>
 </head>
 
 <body class="bg-background overscroll-none overflow-hidden">
@@ -57,8 +57,7 @@
     </section>
 
     <section>
-      <div class="canvas h-full w-screen absolute left-0 top-0">
-        <canvas id="canvas" />
+      <div id="canvas" class="canvas h-full w-screen absolute left-0 top-0">
       </div>
     </section>
 
