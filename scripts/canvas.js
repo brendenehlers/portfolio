@@ -11,8 +11,6 @@ const rate = 2.3 // used in the expDis function
 const brightnessFalloff = 200
 const colors = ["#be4bff", "#d742ff", "#e3bcff", "#f5bfff", "#c1a1c3", "#f", "#f", "#f", "#f", "#f"]
 
-// set these to undefined to disable
-const brightnessCache = undefined
 const expDisCache = new Map()
 
 let pointSize = 1
@@ -20,19 +18,37 @@ if (isSmallScreen()) {
   pointSize = 0.5
 }
 
-// how fast the points move
-let rotAmt = 3 * Const.one_degree 
+// how fast the points move, in radians per second
+let orbitSpeed = 3 * Const.one_degree
 if (isSmallScreen()) {
-  rotAmt = 6 * Const.one_degree
+  orbitSpeed = 6 * Const.one_degree
 }
 
-class Polar {
-  constructor(r, angle) {
-    this.r = r
-    this.angle = angle
-    this.id = this.r.toFixed(0).toString() + "," + this.angle.toFixed(0).toString(); 
-  }
+// pointer black hole: its gravity bends the orbits of nearby stars
+const gravity = 60000
+const gravityRadius = isSmallScreen() ? 140 : 220 // no pull past this distance
+const horizon = isSmallScreen() ? 6 : 10 // softens the pull near the pointer
+const circularize = 0.8 // per second, how fast a disturbed orbit settles into a circle at its new radius
+
+const pointer = { x: 0, y: 0, active: false }
+
+window.addEventListener("pointermove", (e) => {
+  pointer.x = e.clientX
+  pointer.y = e.clientY
+  pointer.active = true
+})
+window.addEventListener("pointerdown", (e) => {
+  pointer.x = e.clientX
+  pointer.y = e.clientY
+  pointer.active = true
+})
+for (const type of ["pointerup", "pointercancel", "pointerleave"]) {
+  window.addEventListener(type, (e) => {
+    // a mouse stays over the page after pointerup, a finger does not
+    if (type !== "pointerup" || e.pointerType !== "mouse") pointer.active = false
+  })
 }
+document.addEventListener("mouseleave", () => { pointer.active = false })
 
 const createSpace = () => {
 
@@ -47,37 +63,43 @@ const createSpace = () => {
 
   const form = space.getForm()
 
-  let pts = []
+  // star state in orbit space: screen offset from center divided by (semimajor, semiminor)
+  const posX = new Float32Array(count)
+  const posY = new Float32Array(count)
+  const velX = new Float32Array(count)
+  const velY = new Float32Array(count)
+
   for ( let i = 0; i < count; i++ ) {
-    const p = center.clone()
-
-    // distribute the points along the radius
-    const x = expDis(Math.random(), rate, true)
-    p.x += maxRadius * x
-
-    // rotate the point randomly around the circle
+    // distribute the points along the radius, then rotate them randomly around the circle
+    const r = maxRadius * expDis(Math.random(), rate, true)
     const angle = Math.random() * Const.two_pi
-    p.rotate2D(angle, center)
+    posX[i] = r * Math.cos(angle) / semimajor
+    posY[i] = r * Math.sin(angle) / semiminor
 
-    pts.push(p)
+    // circular orbit velocity
+    velX[i] = -orbitSpeed * posY[i]
+    velY[i] = orbitSpeed * posX[i]
   }
 
-  space.add({ 
+  space.add({
     animate: (time, ftime) => {
+      const dt = Math.min(ftime, 50) / 1000
 
       // cause an error in this function to see the initial setup
       form.fillOnly("#fff").point(center, 5, "circle")
 
-      for (let i = 0; i < pts.length; i++) {
-        const polar = convertPolar(centerizePoint(pts[i], center), semimajor, semiminor)
-        const brightness = calcPointBrightness(polar)
-        pts[i] = calcNextPoint(polar, center, semimajor, semiminor, rotAmt)
-        form.fillOnly(colors[i % colors.length]).alpha(brightness).point(pts[i], pointSize, "circle")
+      for (let i = 0; i < count; i++) {
+        stepStar(i, posX, posY, velX, velY, center, dt)
+
+        const screen = new Pt(center.x + semimajor * posX[i], center.y + semiminor * posY[i])
+        const r = Math.hypot(posX[i], posY[i])
+        const brightness = calcPointBrightness(r, Math.atan2(posY[i], posX[i]))
+        form.fillOnly(colors[i % colors.length]).alpha(brightness).point(screen, pointSize, "circle")
       }
     }
   })
 
-  space.bindMouse().bindTouch().play()
+  space.play()
 }
 
 $(document).ready(() => {
@@ -90,45 +112,53 @@ $(window).resize(() => {
   createSpace()
 })
 
-function calcNextPoint(polar, center, semimajor, semiminor, angle) {
-  let initialAngle = polar.angle
-  if (initialAngle < 0) {
-    initialAngle += 2 * Math.PI
+// The galaxy pulls each star toward its center with a force proportional to distance.
+// Every orbit in that field has the same period, so an undisturbed galaxy turns as one rigid disk,
+// and a star the pointer moves keeps its new orbit.
+function stepStar(i, posX, posY, velX, velY, center, dt) {
+  if (pointer.active) {
+    const dx = center.x + semimajor * posX[i] - pointer.x
+    const dy = center.y + semiminor * posY[i] - pointer.y
+    const d2 = dx * dx + dy * dy
+    if (d2 < gravityRadius * gravityRadius) {
+      // softened inverse square, faded to 0 at gravityRadius
+      const fade = (1 - Math.sqrt(d2) / gravityRadius) ** 2
+      const a = -gravity * fade / (d2 + horizon * horizon) ** 1.5
+      velX[i] += a * dx / semimajor * dt
+      velY[i] += a * dy / semiminor * dt
+    }
   }
 
-  const finalAngle = initialAngle + angle * Math.PI / 180
+  // drag toward the circular orbit at the current radius, so a slingshot does not throw stars off screen
+  const k = Math.min(1, circularize * dt)
+  velX[i] += (-orbitSpeed * posY[i] - velX[i]) * k
+  velY[i] += (orbitSpeed * posX[i] - velY[i]) * k
 
-  const newX = semimajor * polar.r * Math.cos(finalAngle)
-  const newY = semiminor * polar.r * Math.sin(finalAngle)
-
-  return new Pt(center.x + newX, center.y + newY)
+  // exact step of the central field: the state turns through the angle orbitSpeed * dt
+  const c = Math.cos(orbitSpeed * dt)
+  const s = Math.sin(orbitSpeed * dt)
+  const x = posX[i]
+  const y = posY[i]
+  posX[i] = x * c + velX[i] / orbitSpeed * s
+  posY[i] = y * c + velY[i] / orbitSpeed * s
+  velX[i] = velX[i] * c - x * orbitSpeed * s
+  velY[i] = velY[i] * c - y * orbitSpeed * s
 }
 
-
-function calcPointBrightness(polar) {
-  if (brightnessCache && brightnessCache.has(polar.id)) {
-    return brightnessCache.get(polar.id)
-  }
-
-  const scaledAngle = (polar.angle) / 2 + (Math.PI / 4)
+function calcPointBrightness(r, angle) {
+  const scaledAngle = angle / 2 + (Math.PI / 4)
   let brightness = 0.7 * Math.abs(Math.sin(scaledAngle)) + 0.3
 
-  brightness *= expDis(polar.r / brightnessFalloff, 1)
-
-  brightnessCache && brightnessCache.set(polar.id, brightness)
+  brightness *= expDis(r / brightnessFalloff, 1)
 
   return brightness
-}
-
-function centerizePoint(point, center) {
-  return new Pt(point.x - center.x, point.y - center.y)
 }
 
 function expDis(x, rate, disableCache) {
   if (rate < 0) {
     throw new Error("rate cannot be less than 0")
   }
-  
+
   if (x < 0) return 0
 
   const cacheKey = x.toFixed(2)
@@ -143,25 +173,6 @@ function expDis(x, rate, disableCache) {
 
   return res
 }
-
-function convertPolar(point, semimajor, semiminor) {
-  const x = (point.x * point.x) / (semimajor * semimajor)
-  const y = (point.y * point.y) / (semiminor * semiminor)
-  const r = Math.sqrt(x + y)
-
-
-  const top = (point.y * semimajor)
-  const bot = (point.x * semiminor)
-  let angle = Math.atan2( top, bot )
-
-  return new Polar(r, angle)
-}
-
-function storeObjectInLocalStorage(key, obj) {
-  const serialized = JSON.stringify(Array.from(map.entries()))
-  localStorage.setItem(key, serialized)
-}
-
 
 function isSmallScreen() {
   return window.innerWidth < 600
