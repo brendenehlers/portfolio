@@ -1,3 +1,5 @@
+import { createGalaxy } from "./galaxy.js"
+
 Pts.namespace( window )
 
 let space
@@ -18,21 +20,11 @@ if (isSmallScreen()) {
   pointSize = 0.5
 }
 
-// how fast the points move, in radians per second, for a star at referenceRadius
+// how fast the points move, in radians per second, for a star 100px from the center
 let orbitSpeed = 3 * Const.one_degree
 if (isSmallScreen()) {
   orbitSpeed = 6 * Const.one_degree
 }
-const referenceRadius = 100
-// galaxy center pulls with inverse square gravity, so inner stars orbit faster than outer ones
-const centralMass = orbitSpeed * orbitSpeed * referenceRadius ** 3
-const core = 20 // softens the central pull, so a star that falls to the center is not flung out
-
-// pointer black hole: its gravity bends the orbits of nearby stars
-const gravity = 60000
-const gravityRadius = isSmallScreen() ? 140 : 220 // no pull past this distance
-const horizon = isSmallScreen() ? 6 : 10 // softens the pull near the pointer
-const circularize = 0.8 // per second, how fast a disturbed orbit settles into a circle at its new radius
 
 const pointer = { x: 0, y: 0, active: false }
 
@@ -67,23 +59,12 @@ const createSpace = () => {
 
   const form = space.getForm()
 
-  // star state in orbit space: screen offset from center divided by (semimajor, semiminor)
-  const posX = new Float32Array(count)
-  const posY = new Float32Array(count)
-  const velX = new Float32Array(count)
-  const velY = new Float32Array(count)
-
-  for ( let i = 0; i < count; i++ ) {
-    // distribute the points along the radius, then rotate them randomly around the circle
-    const r = maxRadius * expDis(Math.random(), rate, true)
-    const angle = Math.random() * Const.two_pi
-    posX[i] = r * Math.cos(angle) / semimajor
-    posY[i] = r * Math.sin(angle) / semiminor
-
-    const w = circularSpeed(posX[i], posY[i])
-    velX[i] = -w * posY[i]
-    velY[i] = w * posX[i]
-  }
+  const galaxy = createGalaxy({
+    count, maxRadius, rate, orbitSpeed,
+    holeRadius: isSmallScreen() ? 140 : 220,
+    horizon: isSmallScreen() ? 6 : 10,
+  })
+  const { posX, posY } = galaxy
 
   space.add({
     animate: (time, ftime) => {
@@ -92,9 +73,12 @@ const createSpace = () => {
       // cause an error in this function to see the initial setup
       form.fillOnly("#fff").point(center, 5, "circle")
 
-      for (let i = 0; i < count; i++) {
-        stepStar(i, posX, posY, velX, velY, center, dt)
+      const hole = pointer.active
+        ? { x: (pointer.x - center.x) / semimajor, y: (pointer.y - center.y) / semiminor }
+        : null
+      galaxy.step(dt, hole)
 
+      for (let i = 0; i < count; i++) {
         const screen = new Pt(center.x + semimajor * posX[i], center.y + semiminor * posY[i])
         const r = Math.hypot(posX[i], posY[i])
         const brightness = calcPointBrightness(r, Math.atan2(posY[i], posX[i]))
@@ -115,45 +99,6 @@ $(window).resize(() => {
   $('canvas').remove()
   createSpace()
 })
-
-// angular speed of a circular orbit at (x, y) in the central field
-function circularSpeed(x, y) {
-  return Math.sqrt(centralMass / (x * x + y * y + core * core) ** 1.5)
-}
-
-// Gravity from the galaxy center and the pointer changes each star's velocity,
-// so a star the pointer moves keeps its new orbit.
-function stepStar(i, posX, posY, velX, velY, center, dt) {
-  if (pointer.active) {
-    const dx = center.x + semimajor * posX[i] - pointer.x
-    const dy = center.y + semiminor * posY[i] - pointer.y
-    const d2 = dx * dx + dy * dy
-    if (d2 < gravityRadius * gravityRadius) {
-      // softened inverse square, faded to 0 at gravityRadius
-      const fade = (1 - Math.sqrt(d2) / gravityRadius) ** 2
-      const a = -gravity * fade / (d2 + horizon * horizon) ** 1.5
-      velX[i] += a * dx / semimajor * dt
-      velY[i] += a * dy / semiminor * dt
-    }
-  }
-
-  const x = posX[i]
-  const y = posY[i]
-  const w = circularSpeed(x, y)
-
-  // central pull: -GM r / (r^2 + core^2)^1.5, which is w^2 times the position
-  velX[i] -= w * w * x * dt
-  velY[i] -= w * w * y * dt
-
-  // drag toward the circular orbit at the current radius, so a slingshot does not throw stars off screen
-  const k = Math.min(1, circularize * dt)
-  velX[i] += (-w * y - velX[i]) * k
-  velY[i] += (w * x - velY[i]) * k
-
-  // semi-implicit Euler: move with the new velocity, which keeps orbits stable
-  posX[i] += velX[i] * dt
-  posY[i] += velY[i] * dt
-}
 
 function calcPointBrightness(r, angle) {
   const scaledAngle = angle / 2 + (Math.PI / 4)
