@@ -18,11 +18,15 @@ if (isSmallScreen()) {
   pointSize = 0.5
 }
 
-// how fast the points move, in radians per second
+// how fast the points move, in radians per second, for a star at referenceRadius
 let orbitSpeed = 3 * Const.one_degree
 if (isSmallScreen()) {
   orbitSpeed = 6 * Const.one_degree
 }
+const referenceRadius = 100
+// galaxy center pulls with inverse square gravity, so inner stars orbit faster than outer ones
+const centralMass = orbitSpeed * orbitSpeed * referenceRadius ** 3
+const core = 20 // softens the central pull, so a star that falls to the center is not flung out
 
 // pointer black hole: its gravity bends the orbits of nearby stars
 const gravity = 60000
@@ -76,9 +80,9 @@ const createSpace = () => {
     posX[i] = r * Math.cos(angle) / semimajor
     posY[i] = r * Math.sin(angle) / semiminor
 
-    // circular orbit velocity
-    velX[i] = -orbitSpeed * posY[i]
-    velY[i] = orbitSpeed * posX[i]
+    const w = circularSpeed(posX[i], posY[i])
+    velX[i] = -w * posY[i]
+    velY[i] = w * posX[i]
   }
 
   space.add({
@@ -112,9 +116,13 @@ $(window).resize(() => {
   createSpace()
 })
 
-// The galaxy pulls each star toward its center with a force proportional to distance.
-// Every orbit in that field has the same period, so an undisturbed galaxy turns as one rigid disk,
-// and a star the pointer moves keeps its new orbit.
+// angular speed of a circular orbit at (x, y) in the central field
+function circularSpeed(x, y) {
+  return Math.sqrt(centralMass / (x * x + y * y + core * core) ** 1.5)
+}
+
+// Gravity from the galaxy center and the pointer changes each star's velocity,
+// so a star the pointer moves keeps its new orbit.
 function stepStar(i, posX, posY, velX, velY, center, dt) {
   if (pointer.active) {
     const dx = center.x + semimajor * posX[i] - pointer.x
@@ -129,20 +137,22 @@ function stepStar(i, posX, posY, velX, velY, center, dt) {
     }
   }
 
-  // drag toward the circular orbit at the current radius, so a slingshot does not throw stars off screen
-  const k = Math.min(1, circularize * dt)
-  velX[i] += (-orbitSpeed * posY[i] - velX[i]) * k
-  velY[i] += (orbitSpeed * posX[i] - velY[i]) * k
-
-  // exact step of the central field: the state turns through the angle orbitSpeed * dt
-  const c = Math.cos(orbitSpeed * dt)
-  const s = Math.sin(orbitSpeed * dt)
   const x = posX[i]
   const y = posY[i]
-  posX[i] = x * c + velX[i] / orbitSpeed * s
-  posY[i] = y * c + velY[i] / orbitSpeed * s
-  velX[i] = velX[i] * c - x * orbitSpeed * s
-  velY[i] = velY[i] * c - y * orbitSpeed * s
+  const w = circularSpeed(x, y)
+
+  // central pull: -GM r / (r^2 + core^2)^1.5, which is w^2 times the position
+  velX[i] -= w * w * x * dt
+  velY[i] -= w * w * y * dt
+
+  // drag toward the circular orbit at the current radius, so a slingshot does not throw stars off screen
+  const k = Math.min(1, circularize * dt)
+  velX[i] += (-w * y - velX[i]) * k
+  velY[i] += (w * x - velY[i]) * k
+
+  // semi-implicit Euler: move with the new velocity, which keeps orbits stable
+  posX[i] += velX[i] * dt
+  posY[i] += velY[i] * dt
 }
 
 function calcPointBrightness(r, angle) {
