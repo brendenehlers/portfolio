@@ -26,7 +26,7 @@ function resolvePalette(colors) {
 function brightness(x, y, falloff) {
   const r = Math.hypot(x, y)
   // |sin(angle / 2 + π / 4)| = sqrt((1 + sin angle) / 2)
-  const side = r === 0 ? Math.SQRT1_2 : Math.sqrt((1 + y / r) / 2)
+  const side = r === 0 ? Math.SQRT1_2 : Math.sqrt(Math.max(0, (1 + y / r) / 2))
   return (0.7 * side + 0.3) * Math.exp(-r / falloff)
 }
 
@@ -58,7 +58,8 @@ void main() {
   float b = 1.0;
   if (uFalloff > 0.0) {
     float r = length(vec2(aX, aY));
-    float side = r > 0.0 ? sqrt((1.0 + aY / r) / 2.0) : 0.70710678;
+    // straight north, length() can come out a hair under |aY|, and the sqrt of a negative is NaN, which draws opaque
+    float side = r > 0.0 ? sqrt(max(0.0, (1.0 + aY / r) / 2.0)) : 0.70710678;
     b = (0.7 * side + 0.3) * exp(-r / uFalloff);
   }
   vColor = vec4(aColor, b);
