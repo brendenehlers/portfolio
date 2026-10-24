@@ -1,4 +1,4 @@
-// Debug controls in the bottom-right corner: the number of stars, a toggle for the pointer's pull, and a vertical
+// Debug controls in the bottom-right corner: the number of stars, a reset, a toggle for the pointer's pull, and a vertical
 // dial that speeds up the simulation, 1× to 64× on a log scale, with a clock of simulated time.
 // Double-click the dial to go back to real time.
 
@@ -16,6 +16,7 @@ export function mountDebugPanel(clock, pointer, sim, setStarCount) {
       <input type="number" data-stars min="1" max="${maxStars}" value="${sim.starCount}"
         class="w-10 bg-transparent text-center">
     </label>
+    <button type="button" data-reset class="cursor-pointer opacity-80 hover:opacity-100">reset</button>
     <label class="flex cursor-pointer items-center gap-2 opacity-80">
       <input type="checkbox" data-pointer ${pointer.enabled ? "checked" : ""} class="cursor-pointer accent-bottomHighlight">
       mouse
@@ -33,6 +34,7 @@ export function mountDebugPanel(clock, pointer, sim, setStarCount) {
     e.target.value = n
     setStarCount(n)
   })
+  root.querySelector("[data-reset]").addEventListener("click", () => setStarCount(sim.starCount))
   root.querySelector("[data-pointer]").addEventListener("change", (e) => { pointer.enabled = e.target.checked })
 
   const dial = root.querySelector("input[type=range]")
