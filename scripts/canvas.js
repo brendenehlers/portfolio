@@ -1,4 +1,5 @@
 import { createGalaxy } from "./galaxy.js"
+import { mountTimeDial } from "./time-dial.js"
 
 Pts.namespace( window )
 
@@ -27,6 +28,11 @@ if (isSmallScreen()) {
 }
 
 const pointer = { x: 0, y: 0, active: false }
+
+// scale: simulation seconds per real second; elapsed: simulation seconds since the galaxy was made
+const clock = { scale: 1, elapsed: 0 }
+// the speed dial is a debug tool, shown only with ?debug=1
+if (new URLSearchParams(location.search).get("debug") === "1") mountTimeDial(clock)
 
 window.addEventListener("pointermove", (e) => {
   pointer.x = e.clientX
@@ -65,6 +71,7 @@ const createSpace = () => {
     horizon: isSmallScreen() ? 6 : 10,
   })
   const { posX, posY } = galaxy
+  clock.elapsed = 0
 
   space.add({
     animate: (time, ftime) => {
@@ -76,7 +83,8 @@ const createSpace = () => {
       const hole = pointer.active
         ? { x: (pointer.x - center.x) / semimajor, y: (pointer.y - center.y) / semiminor }
         : null
-      galaxy.step(dt, hole)
+      galaxy.step(dt * clock.scale, hole)
+      clock.elapsed += dt * clock.scale
 
       for (let i = 0; i < count; i++) {
         const screen = new Pt(center.x + semimajor * posX[i], center.y + semiminor * posY[i])

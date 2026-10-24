@@ -9,6 +9,7 @@ const core = 20 // softens the central pull, so a star that falls to the center 
 const diskMass = 4 // total mass of all stars, as a multiple of the central mass
 const holeMass = 60000 // pointer black hole
 const circularize = 0.1 // per second, how fast a disturbed orbit settles into a circle at its new radius
+const maxStep = 1 / 20 // seconds, longest step that keeps orbits stable; inner stars turn about 0.015 rad per step
 
 // orbitSpeed: radians per second at referenceRadius; holeRadius: no pointer pull past this distance;
 // horizon: softens the pointer pull near the pointer
@@ -50,8 +51,14 @@ export function createGalaxy({ count, maxRadius, rate, orbitSpeed, holeRadius, h
     return Math.sqrt(Math.max(0, inward))
   }
 
-  // hole: the pointer position in disk space, or null
+  // hole: the pointer position in disk space, or null.
+  // A long dt (a sped-up simulation) runs as several short steps, since one long Euler step is unstable.
   function step(dt, hole) {
+    const n = Math.ceil(dt / maxStep)
+    for (let i = 0; i < n; i++) substep(dt / n, hole)
+  }
+
+  function substep(dt, hole) {
     selfGravity(posX, posY, count, starMass, diskX, diskY)
 
     for (let i = 0; i < count; i++) {
