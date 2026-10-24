@@ -158,19 +158,19 @@ export function createGalaxy({ count, maxRadius, rate, orbitSpeed, holeRadius, h
     }
   }
 
-  // hole: the pointer position in disk space, or null.
-  // A long dt (a sped-up simulation) runs as several short steps, since one long Euler step is unstable.
-  function step(dt, hole) {
+  // hole: the pointer position in disk space, or null. centerPull: per second squared, a spring that pulls each star
+  // toward the origin, stronger the farther the star is. A long dt (a sped-up simulation) runs as several short steps, since one long Euler step is unstable.
+  function step(dt, hole, centerPull) {
     const n = Math.ceil(dt / maxStep)
-    for (let i = 0; i < n; i++) substep(dt / n, hole)
+    for (let i = 0; i < n; i++) substep(dt / n, hole, centerPull)
   }
 
-  function substep(dt, hole) {
+  function substep(dt, hole, centerPull) {
     // semi-implicit Euler, as for the particles below; the pulls use the particle positions before this step
     const pulls = stars.map(starPull)
     stars.forEach((s, k) => {
-      s.vx += pulls[k].ax * dt
-      s.vy += pulls[k].ay * dt
+      s.vx += (pulls[k].ax - centerPull * s.x) * dt
+      s.vy += (pulls[k].ay - centerPull * s.y) * dt
       s.x += s.vx * dt
       s.y += s.vy * dt
     })

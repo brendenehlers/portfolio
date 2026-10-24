@@ -33,8 +33,9 @@ const pointer = { x: 0, y: 0, active: false, enabled: true }
 
 // scale: simulation seconds per real second; elapsed: simulation seconds since the galaxy was made
 const clock = { scale: 1, elapsed: 0 }
-// starCount: the big points, which orbit each other; changed from the debug panel
-const sim = { starCount: 1 }
+// starCount: the big points, which orbit each other; centerPull: per second squared, a gentle spring that pulls
+// each star toward the galaxy center; both changed from the debug panel
+const sim = { starCount: 1, centerPull: 0.0002 }
 let galaxy
 // the debug panel is shown only with ?debug=1
 if (new URLSearchParams(location.search).get("debug") === "1") {
@@ -89,7 +90,7 @@ const createSpace = () => {
       const hole = pointer.enabled && pointer.active
         ? { x: (pointer.x - center.x) / semimajor, y: (pointer.y - center.y) / semiminor }
         : null
-      galaxy.step(dt * clock.scale, hole)
+      galaxy.step(dt * clock.scale, hole, sim.centerPull)
       const { posX, posY } = galaxy
       clock.elapsed += dt * clock.scale
 

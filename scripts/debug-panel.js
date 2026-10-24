@@ -1,12 +1,13 @@
-// Debug controls in the bottom-right corner: the number of stars, a reset, a toggle for the pointer's pull, and a vertical
+// Debug controls in the bottom-right corner: the number of stars, a reset, the stars' pull to the center, a toggle for the pointer's pull, and a vertical
 // dial that speeds up the simulation, 1× to 64× on a log scale, with a clock of simulated time.
 // Double-click the dial to go back to real time.
 
 const maxDoublings = 6 // 2^6 = 64×
 const maxStars = 6
+const maxCenterPull = 0.002 // per second squared; a pair of stars orbits each other at about 0.0007
 
 // clock: { scale, elapsed }; pointer: { enabled }; both read by the animation loop.
-// sim: { starCount }; setStarCount(n) rebuilds the galaxy with n stars
+// sim: { starCount, centerPull }; setStarCount(n) rebuilds the galaxy with n stars
 export function mountDebugPanel(clock, pointer, sim, setStarCount) {
   const root = document.createElement("div")
   root.className = "fixed bottom-6 right-6 z-40 flex flex-col items-center gap-3 font-mono text-xs text-text"
@@ -17,12 +18,17 @@ export function mountDebugPanel(clock, pointer, sim, setStarCount) {
         class="w-10 bg-transparent text-center">
     </label>
     <button type="button" data-reset class="cursor-pointer opacity-80 hover:opacity-100">reset</button>
+    <label class="flex flex-col items-center gap-1 opacity-80">
+      <span>center <span data-pull-value></span></span>
+      <input type="range" data-pull min="0" max="${maxCenterPull}" step="0.00001" value="${sim.centerPull}"
+        aria-label="Pull of the stars toward the center" class="w-24 cursor-pointer accent-bottomHighlight">
+    </label>
     <label class="flex cursor-pointer items-center gap-2 opacity-80">
       <input type="checkbox" data-pointer ${pointer.enabled ? "checked" : ""} class="cursor-pointer accent-bottomHighlight">
       mouse
     </label>
     <span data-scale class="opacity-80"></span>
-    <input type="range" min="0" max="${maxDoublings}" step="0.01" value="0" aria-label="Simulation speed"
+    <input type="range" data-speed min="0" max="${maxDoublings}" step="0.01" value="0" aria-label="Simulation speed"
       class="h-40 w-1 cursor-pointer accent-bottomHighlight" style="writing-mode: vertical-lr; direction: rtl">
     <span data-elapsed class="opacity-60"></span>`
 
@@ -35,9 +41,17 @@ export function mountDebugPanel(clock, pointer, sim, setStarCount) {
     setStarCount(n)
   })
   root.querySelector("[data-reset]").addEventListener("click", () => setStarCount(sim.starCount))
+  const pull = root.querySelector("[data-pull]")
+  const pullValue = root.querySelector("[data-pull-value]")
+  const showPull = () => { pullValue.textContent = (sim.centerPull * 1e4).toFixed(1) }
+  pull.addEventListener("input", () => {
+    sim.centerPull = Number(pull.value)
+    showPull()
+  })
+  showPull()
   root.querySelector("[data-pointer]").addEventListener("change", (e) => { pointer.enabled = e.target.checked })
 
-  const dial = root.querySelector("input[type=range]")
+  const dial = root.querySelector("[data-speed]")
   const scaleLabel = root.querySelector("[data-scale]")
   const elapsedLabel = root.querySelector("[data-elapsed]")
   dial.addEventListener("input", () => { clock.scale = 2 ** Number(dial.value) })
