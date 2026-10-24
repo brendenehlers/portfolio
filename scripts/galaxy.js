@@ -1,23 +1,30 @@
 import { createSelfGravity } from "./gravity.js"
 
 // Star physics in disk space: screen offset from the galaxy center divided by (semimajor, semiminor).
-// Gravity from the galaxy center, the other stars, and the pointer changes each star's velocity,
-// so a star the pointer moves keeps its new orbit.
+// Particles feel gravity from the stars, from each other, and from the pointer, so a particle the pointer
+// moves keeps its new orbit. The stars feel each other and the particles.
 
 const referenceRadius = 100
-const core = 20 // softens the central pull, so a star that falls to the center is not flung out
-const diskMass = 4 // total mass of all stars, as a multiple of the central mass
+const core = 20 // softens each star's pull, so a particle that falls into a star is not flung out
+const diskMass = 4 // total mass of all particles, as a multiple of the total star mass before starMassScale
+// makes the stars heavier than the disk, so the particles do not pull them off course. Orbit speeds stay the same,
+// so a larger scale makes the particles lighter instead, and the disk forms fewer blobs.
+const starMassScale = 4
 const holeMass = 60000 // pointer black hole
 const circularize = 0.1 // per second, how fast a disturbed orbit settles into a circle at its new radius
-const maxStep = 1 / 20 // seconds, longest step that keeps orbits stable; inner stars turn about 0.015 rad per step
+const maxStep = 1 / 20 // seconds, longest step that keeps orbits stable; inner particles turn about 0.015 rad per step
 
-// orbitSpeed: radians per second at referenceRadius; holeRadius: no pointer pull past this distance;
-// horizon: softens the pointer pull near the pointer
-export function createGalaxy({ count, maxRadius, rate, orbitSpeed, holeRadius, horizon }) {
-  // galaxy center pulls with inverse square gravity, so inner stars orbit faster than outer ones
-  const centralMass = orbitSpeed * orbitSpeed * referenceRadius ** 3
-  const starMass = diskMass * centralMass / count
+// orbitSpeed: radians per second at referenceRadius around a lone star; holeRadius: no pointer pull past this distance;
+// horizon: softens the pointer pull near the pointer; stars: [{ x, y, mass }], mass as a share of the total star mass
+export function createGalaxy({ count, maxRadius, rate, orbitSpeed, holeRadius, horizon, stars: starSpecs }) {
+  // stars pull with inverse square gravity, so inner particles orbit faster than outer ones
+  const totalStarMass = orbitSpeed * orbitSpeed * referenceRadius ** 3
+  const particleMass = diskMass * totalStarMass / (starMassScale * count)
   const selfGravity = createSelfGravity({ size: 32, extent: 320, softening: 30 }) // smaller softening breaks the disk into blobs
+
+  const shares = starSpecs.reduce((sum, s) => sum + s.mass, 0)
+  const stars = starSpecs.map((s) => ({ x: s.x, y: s.y, vx: 0, vy: 0, mass: totalStarMass * s.mass / shares }))
+  centerStars()
 
   const posX = new Float32Array(count)
   const posY = new Float32Array(count)
@@ -27,28 +34,128 @@ export function createGalaxy({ count, maxRadius, rate, orbitSpeed, holeRadius, h
   const diskY = new Float32Array(count)
 
   for (let i = 0; i < count; i++) {
-    // distribute the points along the radius, then rotate them randomly around the circle
+    // each particle starts around one star: distribute along the radius, then rotate randomly around the circle
+    const star = stars[i % stars.length]
     const r = maxRadius * Math.exp(-rate * Math.random())
     const angle = Math.random() * 2 * Math.PI
-    posX[i] = r * Math.cos(angle)
-    posY[i] = r * Math.sin(angle)
+    posX[i] = star.x + r * Math.cos(angle)
+    posY[i] = star.y + r * Math.sin(angle)
   }
 
-  selfGravity(posX, posY, count, starMass, diskX, diskY)
+  setStarOrbits()
+  selfGravity(posX, posY, count, particleMass, diskX, diskY)
   for (let i = 0; i < count; i++) {
-    const w = circularSpeed(i)
-    velX[i] = -w * posY[i]
-    velY[i] = w * posX[i]
+    const star = stars[i % stars.length]
+    const w = circularSpeed(i, star)
+    velX[i] = star.vx - w * (posY[i] - star.y)
+    velY[i] = star.vy + w * (posX[i] - star.x)
+  }
+  recenter()
+
+  // moves the stars' center of mass to the origin
+  function centerStars() {
+    const cx = stars.reduce((sum, s) => sum + s.mass * s.x, 0) / totalStarMass
+    const cy = stars.reduce((sum, s) => sum + s.mass * s.y, 0) / totalStarMass
+    for (const s of stars) {
+      s.x -= cx
+      s.y -= cy
+    }
   }
 
-  // angular speed of a circular orbit at star i in the field of the center and the disk
-  function circularSpeed(i) {
-    const x = posX[i]
-    const y = posY[i]
+  // starts each star on a circular orbit around the origin
+  function setStarOrbits() {
+    for (const s of stars) {
+      const r = Math.hypot(s.x, s.y)
+      if (r === 0) continue
+      const { ax, ay } = starPull(s)
+      const w = Math.sqrt(Math.max(0, -(ax * s.x + ay * s.y)) / (r * r))
+      s.vx = -w * s.y
+      s.vy = w * s.x
+    }
+  }
+
+  // acceleration on star s from the other stars and the particles, softened the same as a star's pull on a particle
+  function starPull(s) {
+    let ax = 0
+    let ay = 0
+    for (const o of stars) {
+      if (o === s) continue
+      const dx = s.x - o.x
+      const dy = s.y - o.y
+      const a = -o.mass / (dx * dx + dy * dy + core * core) ** 1.5
+      ax += a * dx
+      ay += a * dy
+    }
+    for (let i = 0; i < count; i++) {
+      const dx = s.x - posX[i]
+      const dy = s.y - posY[i]
+      const a = -particleMass / (dx * dx + dy * dy + core * core) ** 1.5
+      ax += a * dx
+      ay += a * dy
+    }
+    return { ax, ay }
+  }
+
+  // the star whose pull on particle i is strongest
+  function dominantStar(i) {
+    let best = stars[0]
+    let bestPull = 0
+    for (const s of stars) {
+      const dx = posX[i] - s.x
+      const dy = posY[i] - s.y
+      const pull = s.mass / (dx * dx + dy * dy + core * core)
+      if (pull > bestPull) {
+        best = s
+        bestPull = pull
+      }
+    }
+    return best
+  }
+
+  // angular speed of a circular orbit around star at particle i, in the field of that star and the disk
+  function circularSpeed(i, star) {
+    const x = posX[i] - star.x
+    const y = posY[i] - star.y
     const r2 = x * x + y * y
     if (r2 === 0) return 0
-    const inward = centralMass / (r2 + core * core) ** 1.5 - (diskX[i] * x + diskY[i] * y) / r2
+    const inward = star.mass / (r2 + core * core) ** 1.5 - (diskX[i] * x + diskY[i] * y) / r2
     return Math.sqrt(Math.max(0, inward))
+  }
+
+  // shifts everything so the center of mass of the stars and particles sits still at the origin.
+  // A random disk is lopsided, and the pointer and the circularizing drag add momentum, so without this the galaxy
+  // drifts off screen and off the self-gravity grid. Moving the frame does not change the forces.
+  function recenter() {
+    let x = 0, y = 0, vx = 0, vy = 0
+    for (const s of stars) {
+      x += s.mass * s.x
+      y += s.mass * s.y
+      vx += s.mass * s.vx
+      vy += s.mass * s.vy
+    }
+    for (let i = 0; i < count; i++) {
+      x += particleMass * posX[i]
+      y += particleMass * posY[i]
+      vx += particleMass * velX[i]
+      vy += particleMass * velY[i]
+    }
+    const total = totalStarMass * (1 + diskMass / starMassScale)
+    x /= total
+    y /= total
+    vx /= total
+    vy /= total
+    for (const s of stars) {
+      s.x -= x
+      s.y -= y
+      s.vx -= vx
+      s.vy -= vy
+    }
+    for (let i = 0; i < count; i++) {
+      posX[i] -= x
+      posY[i] -= y
+      velX[i] -= vx
+      velY[i] -= vy
+    }
   }
 
   // hole: the pointer position in disk space, or null.
@@ -59,14 +166,29 @@ export function createGalaxy({ count, maxRadius, rate, orbitSpeed, holeRadius, h
   }
 
   function substep(dt, hole) {
-    selfGravity(posX, posY, count, starMass, diskX, diskY)
+    // semi-implicit Euler, as for the particles below; the pulls use the particle positions before this step
+    const pulls = stars.map(starPull)
+    stars.forEach((s, k) => {
+      s.vx += pulls[k].ax * dt
+      s.vy += pulls[k].ay * dt
+      s.x += s.vx * dt
+      s.y += s.vy * dt
+    })
+
+    selfGravity(posX, posY, count, particleMass, diskX, diskY)
 
     for (let i = 0; i < count; i++) {
       const x = posX[i]
       const y = posY[i]
-      const central = -centralMass / (x * x + y * y + core * core) ** 1.5
-      let ax = central * x + diskX[i]
-      let ay = central * y + diskY[i]
+      let ax = diskX[i]
+      let ay = diskY[i]
+      for (const s of stars) {
+        const dx = x - s.x
+        const dy = y - s.y
+        const a = -s.mass / (dx * dx + dy * dy + core * core) ** 1.5
+        ax += a * dx
+        ay += a * dy
+      }
 
       if (hole) {
         const dx = x - hole.x
@@ -84,17 +206,20 @@ export function createGalaxy({ count, maxRadius, rate, orbitSpeed, holeRadius, h
       velX[i] += ax * dt
       velY[i] += ay * dt
 
-      // drag toward the circular orbit at the current radius, so a slingshot does not throw stars off screen
-      const w = circularSpeed(i)
+      // drag toward the circular orbit around the nearest star, so a slingshot does not throw particles off screen
+      const star = dominantStar(i)
+      const w = circularSpeed(i, star)
       const k = Math.min(1, circularize * dt)
-      velX[i] += (-w * y - velX[i]) * k
-      velY[i] += (w * x - velY[i]) * k
+      velX[i] += (star.vx - w * (y - star.y) - velX[i]) * k
+      velY[i] += (star.vy + w * (x - star.x) - velY[i]) * k
 
       // semi-implicit Euler: move with the new velocity, which keeps orbits stable
       posX[i] += velX[i] * dt
       posY[i] += velY[i] * dt
     }
+
+    recenter()
   }
 
-  return { posX, posY, step }
+  return { posX, posY, stars, step }
 }

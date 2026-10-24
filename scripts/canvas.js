@@ -12,6 +12,7 @@ const semimajor = 1.5 // controls how far the points go on the x-axis
 const semiminor = 1 // controls how far the points go on the y-axis
 const rate = 2.3 // used in the expDis function
 const brightnessFalloff = 200
+const starSpacing = 90 // with several stars, the radius of the ring they start on
 const colors = ["#be4bff", "#d742ff", "#e3bcff", "#f5bfff", "#c1a1c3", "#f", "#f", "#f", "#f", "#f"]
 
 const expDisCache = new Map()
@@ -32,8 +33,16 @@ const pointer = { x: 0, y: 0, active: false, enabled: true }
 
 // scale: simulation seconds per real second; elapsed: simulation seconds since the galaxy was made
 const clock = { scale: 1, elapsed: 0 }
+// starCount: the big points, which orbit each other; changed from the debug panel
+const sim = { starCount: 1 }
+let galaxy
 // the debug panel is shown only with ?debug=1
-if (new URLSearchParams(location.search).get("debug") === "1") mountDebugPanel(clock, pointer)
+if (new URLSearchParams(location.search).get("debug") === "1") {
+  mountDebugPanel(clock, pointer, sim, (n) => {
+    sim.starCount = n
+    buildGalaxy()
+  })
+}
 
 window.addEventListener("pointermove", (e) => {
   pointer.x = e.clientX
@@ -66,25 +75,22 @@ const createSpace = () => {
 
   const form = space.getForm()
 
-  const galaxy = createGalaxy({
-    count, maxRadius, rate, orbitSpeed,
-    holeRadius: isSmallScreen() ? 140 : 220,
-    horizon: isSmallScreen() ? 6 : 10,
-  })
-  const { posX, posY } = galaxy
-  clock.elapsed = 0
+  buildGalaxy()
 
   space.add({
     animate: (time, ftime) => {
       const dt = Math.min(ftime, 50) / 1000
 
       // cause an error in this function to see the initial setup
-      form.fillOnly("#fff").point(center, 5, "circle")
+      for (const star of galaxy.stars) {
+        form.fillOnly("#fff").point(new Pt(center.x + semimajor * star.x, center.y + semiminor * star.y), 5, "circle")
+      }
 
       const hole = pointer.enabled && pointer.active
         ? { x: (pointer.x - center.x) / semimajor, y: (pointer.y - center.y) / semiminor }
         : null
       galaxy.step(dt * clock.scale, hole)
+      const { posX, posY } = galaxy
       clock.elapsed += dt * clock.scale
 
       for (let i = 0; i < count; i++) {
@@ -108,6 +114,21 @@ $(window).resize(() => {
   $('canvas').remove()
   createSpace()
 })
+
+// equal stars spaced evenly on a ring, or one star at the center
+function buildGalaxy() {
+  const stars = Array.from({ length: sim.starCount }, (_, k) => {
+    const angle = 2 * Math.PI * k / sim.starCount
+    const r = sim.starCount > 1 ? starSpacing : 0
+    return { x: r * Math.cos(angle), y: r * Math.sin(angle), mass: 1 }
+  })
+  galaxy = createGalaxy({
+    count, maxRadius, rate, orbitSpeed, stars,
+    holeRadius: isSmallScreen() ? 140 : 220,
+    horizon: isSmallScreen() ? 6 : 10,
+  })
+  clock.elapsed = 0
+}
 
 function calcPointBrightness(r, angle) {
   const scaledAngle = angle / 2 + (Math.PI / 4)
