@@ -1,5 +1,5 @@
 import { createGalaxy } from "./galaxy.js"
-import { mountTimeDial } from "./time-dial.js"
+import { mountDebugPanel } from "./debug-panel.js"
 
 Pts.namespace( window )
 
@@ -27,12 +27,13 @@ if (isSmallScreen()) {
   orbitSpeed = 6 * Const.one_degree
 }
 
-const pointer = { x: 0, y: 0, active: false }
+// enabled: whether the pointer pulls on the stars, toggled from the debug panel
+const pointer = { x: 0, y: 0, active: false, enabled: true }
 
 // scale: simulation seconds per real second; elapsed: simulation seconds since the galaxy was made
 const clock = { scale: 1, elapsed: 0 }
-// the speed dial is a debug tool, shown only with ?debug=1
-if (new URLSearchParams(location.search).get("debug") === "1") mountTimeDial(clock)
+// the debug panel is shown only with ?debug=1
+if (new URLSearchParams(location.search).get("debug") === "1") mountDebugPanel(clock, pointer)
 
 window.addEventListener("pointermove", (e) => {
   pointer.x = e.clientX
@@ -80,7 +81,7 @@ const createSpace = () => {
       // cause an error in this function to see the initial setup
       form.fillOnly("#fff").point(center, 5, "circle")
 
-      const hole = pointer.active
+      const hole = pointer.enabled && pointer.active
         ? { x: (pointer.x - center.x) / semimajor, y: (pointer.y - center.y) / semiminor }
         : null
       galaxy.step(dt * clock.scale, hole)
