@@ -1,14 +1,15 @@
-// Debug controls in the bottom-right corner: the number of stars, a reset, the stars' pull to the center, a toggle for the pointer's pull, and a vertical
+// Debug controls in the bottom-right corner: the number of stars, the particle density, a reset, the stars' pull to the center, a toggle for the pointer's pull, and a vertical
 // dial that speeds up the simulation, 1× to 64× on a log scale, with a clock of simulated time.
 // Double-click the dial to go back to real time.
 
 const maxDoublings = 6 // 2^6 = 64×
 const maxStars = 6
+const maxDensity = 8 // multiples of the normal particle count
 const maxCenterPull = 0.002 // per second squared; a pair of stars orbits each other at about 0.0007
 
 // clock: { scale, elapsed }; pointer: { enabled }; both read by the animation loop.
-// sim: { starCount, centerPull }; setStarCount(n) rebuilds the galaxy with n stars
-export function mountDebugPanel(clock, pointer, sim, setStarCount) {
+// sim: { starCount, density, centerPull }; rebuild() makes a new galaxy from sim
+export function mountDebugPanel(clock, pointer, sim, rebuild) {
   const root = document.createElement("div")
   root.className = "fixed bottom-6 right-6 z-40 flex flex-col items-center gap-3 font-mono text-xs text-text"
   root.innerHTML = `
@@ -16,6 +17,11 @@ export function mountDebugPanel(clock, pointer, sim, setStarCount) {
       stars
       <input type="number" data-stars min="1" max="${maxStars}" value="${sim.starCount}"
         class="w-10 bg-transparent text-center">
+    </label>
+    <label class="flex items-center gap-2 opacity-80">
+      density
+      <input type="number" data-density min="1" max="${maxDensity}" value="${sim.density}"
+        class="w-10 bg-transparent text-center">×
     </label>
     <button type="button" data-reset class="cursor-pointer opacity-80 hover:opacity-100">reset</button>
     <label class="flex flex-col items-center gap-1 opacity-80">
@@ -36,11 +42,14 @@ export function mountDebugPanel(clock, pointer, sim, setStarCount) {
   for (const type of ["pointerdown", "pointermove"]) root.addEventListener(type, (e) => e.stopPropagation())
 
   root.querySelector("[data-stars]").addEventListener("change", (e) => {
-    const n = Math.min(maxStars, Math.max(1, Math.round(Number(e.target.value)) || 1))
-    e.target.value = n
-    setStarCount(n)
+    sim.starCount = e.target.value = clampInt(e.target.value, maxStars)
+    rebuild()
   })
-  root.querySelector("[data-reset]").addEventListener("click", () => setStarCount(sim.starCount))
+  root.querySelector("[data-density]").addEventListener("change", (e) => {
+    sim.density = e.target.value = clampInt(e.target.value, maxDensity)
+    rebuild()
+  })
+  root.querySelector("[data-reset]").addEventListener("click", rebuild)
   const pull = root.querySelector("[data-pull]")
   const pullValue = root.querySelector("[data-pull-value]")
   const showPull = () => { pullValue.textContent = (sim.centerPull * 1e4).toFixed(1) }
@@ -74,4 +83,8 @@ function formatElapsed(seconds) {
   const m = Math.floor(seconds / 60)
   const s = Math.floor(seconds % 60)
   return m > 0 ? `${m}m ${String(s).padStart(2, "0")}s` : `${s}s`
+}
+
+function clampInt(value, max) {
+  return Math.min(max, Math.max(1, Math.round(Number(value)) || 1))
 }

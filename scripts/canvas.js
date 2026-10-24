@@ -3,7 +3,7 @@ import { createGalaxyView } from "./galaxy-view.js"
 import { mountDebugPanel } from "./debug-panel.js"
 
 // config params
-const count = 2500 // number of points
+const baseCount = 2500 // number of points at density 1
 const maxRadius = 300 // how far the points can go out when being generated
 const semimajor = 1.5 // controls how far the points go on the x-axis
 const semiminor = 1 // controls how far the points go on the y-axis
@@ -20,16 +20,13 @@ const pointer = { x: 0, y: 0, active: false, enabled: true }
 
 // scale: simulation seconds per real second; elapsed: simulation seconds since the galaxy was made
 const clock = { scale: 1, elapsed: 0 }
-// starCount: the big points, which orbit each other; centerPull: per second squared, a gentle spring that pulls
-// each star toward the galaxy center; both changed from the debug panel
-const sim = { starCount: 1, centerPull: 0.0002 }
+// starCount: the big points, which orbit each other; density: multiple of baseCount small points; centerPull: per
+// second squared, a gentle spring that pulls each star toward the galaxy center; all changed from the debug panel
+const sim = { starCount: 1, density: 1, centerPull: 0.0002 }
 let galaxy
 // the debug panel is shown only with ?debug=1
 if (new URLSearchParams(location.search).get("debug") === "1") {
-  mountDebugPanel(clock, pointer, sim, (n) => {
-    sim.starCount = n
-    buildGalaxy()
-  })
+  mountDebugPanel(clock, pointer, sim, buildGalaxy)
 }
 
 window.addEventListener("pointermove", (e) => {
@@ -82,7 +79,7 @@ function buildGalaxy() {
     return { x: r * Math.cos(angle), y: r * Math.sin(angle), mass: 1 }
   })
   galaxy = createGalaxy({
-    count, maxRadius, rate, orbitSpeed, stars,
+    count: baseCount * sim.density, maxRadius, rate, orbitSpeed, stars,
     holeRadius: isSmallScreen() ? 140 : 220,
     horizon: isSmallScreen() ? 6 : 10,
   })
